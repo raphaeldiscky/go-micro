@@ -13,7 +13,7 @@ services:
       replicas: 1
 
   authentication-service:
-    build: 
+    build:
       context: ./../authentication-service
       dockerfile: ./../authentication-service/authentication-service.dockerfile
     restart: always
@@ -23,18 +23,19 @@ services:
       mode: replicated
       replicas: 1
     environment:
-      DSN: "host=postgres port=5432 user=root dbname=microservices_go password=secret sslmode=disable timezone=UTC connect_timeout=5"
+      DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5"
 
   postgres:
-    image: 'postgres:16-alpine'
+    image: "postgres:16-alpine"
     ports:
       - "5432:5432"
+    restart: always
     deploy:
       mode: replicated
       replicas: 1
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: microservices_go
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
