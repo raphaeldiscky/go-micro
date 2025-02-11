@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"logger-service/data"
+	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -42,6 +44,25 @@ func main() {
 		}
 	}()
 
+	app := Config{
+		Models: data.New(client),
+	}
+	// start the server
+	go app.serve()
+
+	// @TODO: start the gRPC server
+}
+
+func (app *Config) serve() {
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", webPort),
+		Handler: app.routes(),
+	}
+
+	err := srv.ListenAndServe()
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 func connectToMongo() (*mongo.Client, error) {
