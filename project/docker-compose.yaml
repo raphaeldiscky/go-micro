@@ -54,6 +54,14 @@ services:
       MAIL_FROM_NAME: test
       MAIL_FROM_ADDRESS: test@localhost.com
 
+  listener-service:
+    build:
+      context: ./../listener-service
+      dockerfile: ./../listener-service/listener-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
+
   postgres:
     image: "postgres:16-alpine"
     ports:
