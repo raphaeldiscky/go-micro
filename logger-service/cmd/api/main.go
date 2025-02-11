@@ -16,7 +16,11 @@ const (
 	webPort  = "4000"
 	rpcPort  = "4001"
 	grpcPort = "4002"
-	mongoURL = "mongodb://localhost:27017"
+	mongoURL = "mongodb://mongo:27017"
+	// Running with docker use mongo:27017
+	// mongo is the service name in the docker-compose.yaml file
+	// 27017 is the container port for mongo
+	// Running locally use localhost:27018
 )
 
 var client *mongo.Client
@@ -49,22 +53,30 @@ func main() {
 	}
 	log.Println("Starting logger service on port", webPort)
 	// start the server
-	go app.serve()
+	// go app.serve()
 
-	// @TODO: start the gRPC server
-}
-
-func (app *Config) serve() {
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
 	}
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		log.Panic(err)
 	}
 }
+
+// func (app *Config) serve() {
+// 	srv := &http.Server{
+// 		Addr:    fmt.Sprintf(":%s", webPort),
+// 		Handler: app.routes(),
+// 	}
+
+// 	err := srv.ListenAndServe()
+// 	if err != nil {
+// 		log.Panic(err)
+// 	}
+// }
 
 func connectToMongo() (*mongo.Client, error) {
 	// create a client options
