@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/rpc"
 )
 
 type RequestPayload struct {
@@ -32,6 +34,13 @@ type LogPayload struct {
 	Data string `json:"data"`
 }
 
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+const rpcPort = "4001"
+
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
 	payload := jsonResponse{
 		Error:   false,
@@ -56,7 +65,7 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	case "auth":
 		app.authenticate(w, requestPayload.Auth)
 	case "log":
-		app.logEventViaRabbit(w, requestPayload.Log)
+		app.logItemViaRPC(w, requestPayload.Log)
 	case "mail":
 		// @NOTE: In production, mail-service should be running directly on the broker service,
 		// should be authenticate first in authentication-service, and then call the mail-service.
@@ -184,7 +193,7 @@ func (app *Config) sendMail(w http.ResponseWriter, m MailPayload) {
 	app.writeJSON(w, http.StatusAccepted, payload)
 }
 
-func (app *Config) logEventViaRabbit(w http.ResponseWriter, l LogPayload) {
+func (app *Config) logItemViaRabbit(w http.ResponseWriter, l LogPayload) {
 	err := app.pushToQueue(l.Name, l.Data)
 	if err != nil {
 		app.errorJSON(w, err)
@@ -216,4 +225,31 @@ func (app *Config) pushToQueue(name, msg string) error {
 	}
 
 	return nil
+}
+
+func (app *Config) logItemViaRPC(w http.ResponseWriter, l LogPayload) {
+	client, err := rpc.Dial("tcp", fmt.Sprintf("logger-service:%s", rpcPort))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	rpcPayload := RPCPayload{
+		Name: l.Name,
+		Data: l.Data,
+	}
+
+	var result string
+	err = client.Call("RPCServer.LogInfo", rpcPayload, &result)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	payload := jsonResponse{
+		Error:   false,
+		Message: result,
+	}
+
+	app.writeJSON(w, http.StatusAccepted, payload)
 }

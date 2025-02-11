@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"logger-service/data"
+	"net"
 	"net/http"
+	"net/rpc"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -17,7 +19,7 @@ const (
 	rpcPort  = "4001"
 	grpcPort = "4002"
 	mongoURL = "mongodb://mongo:27017"
-	// Running with docker use mongo:27017
+	// @NOTE: Running with docker use mongo:27017
 	// mongo is the service name in the docker-compose.yaml file
 	// 27017 is the container port for mongo
 	// Running locally use localhost:27018
@@ -51,10 +53,13 @@ func main() {
 	app := Config{
 		Models: data.New(client),
 	}
-	log.Println("Starting logger service on port", webPort)
-	// start the server
-	// go app.serve()
 
+	// register the RPC server
+	err = rpc.Register(new(RPCServer))
+	go app.rpcListen()
+
+	// start the server
+	log.Println("Starting logger service on port", webPort)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
@@ -65,18 +70,6 @@ func main() {
 		log.Panic(err)
 	}
 }
-
-// func (app *Config) serve() {
-// 	srv := &http.Server{
-// 		Addr:    fmt.Sprintf(":%s", webPort),
-// 		Handler: app.routes(),
-// 	}
-
-// 	err := srv.ListenAndServe()
-// 	if err != nil {
-// 		log.Panic(err)
-// 	}
-// }
 
 func connectToMongo() (*mongo.Client, error) {
 	// create a client options
@@ -95,4 +88,23 @@ func connectToMongo() (*mongo.Client, error) {
 	log.Println("Connected to mongo!")
 
 	return client, nil
+}
+
+func (app *Config) rpcListen() {
+	log.Println("Starting RPC server on port", rpcPort)
+
+	rpcListener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", rpcPort))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rpcListener.Close()
+
+	for {
+		rpcConn, err := rpcListener.Accept()
+		if err != nil {
+			continue
+		}
+		go rpc.ServeConn(rpcConn)
+	}
 }
