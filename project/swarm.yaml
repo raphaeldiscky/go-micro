@@ -4,7 +4,7 @@ services:
   broker-service:
     image: "rdisckyzp/broker-service:1.0.0"
     ports:
-      - "8080:4000"
+      - "8080:8080"
     deploy:
       mode: replicated
       replicas: 1

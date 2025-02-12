@@ -12,7 +12,7 @@ type Config struct {
 	Mailer Mail
 }
 
-const webPort = "4000"
+const webPort = "8080"
 
 func main() {
 	app := Config{
