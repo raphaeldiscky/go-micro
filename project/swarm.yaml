@@ -1,10 +1,29 @@
 version: "3"
 
 services:
-  broker-service:
-    image: "rdisckyzp/broker-service:1.0.0"
+  caddy:
+    image: "rdisckyzp/go-micro-caddy:1.0.0"
+    deploy:
+      mode: replicated
+      replicas: 1
     ports:
-      - "8080:8080"
+      - "9000:9000" # expose cadddy for front-end
+      - "9001:9001" # expose cadddy for back-end
+      - "443:443" # for ssl
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  front-end:
+    image: "rdisckyzp/front-end:1.0.1"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      BROKER_URL: "http://backend"
+
+  broker-service:
+    image: "rdisckyzp/broker-service:1.0.1"
     deploy:
       mode: replicated
       replicas: 1
@@ -18,7 +37,7 @@ services:
       DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5"
 
   logger-service:
-    image: "rdisckyzp/logger-service:1.0.0"
+    image: "rdisckyzp/logger-service:1.0.1"
     deploy:
       mode: replicated
       replicas: 1
@@ -73,7 +92,6 @@ services:
     image: "postgres:16-alpine"
     ports:
       - "5432:5432"
-    restart: always
     deploy:
       mode: replicated
       replicas: 1
@@ -83,3 +101,8 @@ services:
       POSTGRES_DB: users
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
